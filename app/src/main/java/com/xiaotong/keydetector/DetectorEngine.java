@@ -20,7 +20,11 @@ import com.xiaotong.keydetector.checker.BouncyCastleChainChecker;
 import com.xiaotong.keydetector.checker.ChallengeChecker;
 import com.xiaotong.keydetector.checker.Checker;
 import com.xiaotong.keydetector.checker.KeyConsistencyChecker;
+import com.xiaotong.keydetector.checker.KeyIdMetadataChecker;
+import com.xiaotong.keydetector.checker.KeyMetadataShapeChecker;
+import com.xiaotong.keydetector.checker.ListEntriesBatchedChecker;
 import com.xiaotong.keydetector.checker.ListEntriesChecker;
+import com.xiaotong.keydetector.checker.OperationErrorPathChecker;
 import com.xiaotong.keydetector.checker.PatchModeChecker;
 import com.xiaotong.keydetector.checker.RevokedKeyChecker;
 import com.xiaotong.keydetector.checker.SecurityLevelChecker;
@@ -51,6 +55,10 @@ public final class DetectorEngine {
     private static final int ERR_ATTESTATION_SECURITY_LEVEL = 1 << 17;
     private static final int ERR_BOOTLOADER_UNLOCKED = 1 << 18;
     private static final int ERR_VERIFIED_BOOT_STATE = 1 << 19;
+    private static final int ERR_KEY_ID_METADATA = 1 << 20;
+    private static final int ERR_KEY_METADATA_SHAPE = 1 << 21;
+    private static final int ERR_OPERATION_ERROR_PATH = 1 << 22;
+    private static final int ERR_LIST_ENTRIES_BATCHED = 1 << 23;
     public static final LinkedHashMap<Integer, Checker> FlagCheckerMap = new LinkedHashMap<>();
 
     static {
@@ -73,6 +81,10 @@ public final class DetectorEngine {
         FlagCheckerMap.put(ERR_ATTESTATION_SECURITY_LEVEL, new AttestationSecurityLevelChecker());
         FlagCheckerMap.put(ERR_BOOTLOADER_UNLOCKED, new BootloaderUnlockedChecker());
         FlagCheckerMap.put(ERR_VERIFIED_BOOT_STATE, new VerifiedBootStateChecker());
+        FlagCheckerMap.put(ERR_KEY_ID_METADATA, new KeyIdMetadataChecker());
+        FlagCheckerMap.put(ERR_KEY_METADATA_SHAPE, new KeyMetadataShapeChecker());
+        FlagCheckerMap.put(ERR_OPERATION_ERROR_PATH, new OperationErrorPathChecker());
+        FlagCheckerMap.put(ERR_LIST_ENTRIES_BATCHED, new ListEntriesBatchedChecker());
     }
 
     public int run(CheckerContext ctx) {
@@ -127,7 +139,11 @@ public final class DetectorEngine {
                                 | ERR_LIST_ENTRIES
                                 | ERR_STATE_INCONSISTENCY
                                 | ERR_SECURITY_LEVEL
-                                | ERR_INJECTION))
+                                | ERR_INJECTION
+                                | ERR_KEY_ID_METADATA
+                                | ERR_KEY_METADATA_SHAPE
+                                | ERR_OPERATION_ERROR_PATH
+                                | ERR_LIST_ENTRIES_BATCHED))
                 == 0;
 
         boolean abnormal = (result & RESULT_TRUSTED) == 0 || (result & ~RESULT_TRUSTED) != 0;
@@ -248,6 +264,20 @@ public final class DetectorEngine {
         }
         if ((code & ERR_VERIFIED_BOOT_STATE) != 0) {
             Log.e("Detector", "Flag set: Verified Boot State Anomaly (" + ERR_VERIFIED_BOOT_STATE + ")");
+        }
+        if ((code & ERR_KEY_ID_METADATA) != 0) {
+            Log.e("Detector", "Flag set: KeyMetadata KEY_ID Semantics Anomaly (" + ERR_KEY_ID_METADATA + ")");
+        }
+        if ((code & ERR_KEY_METADATA_SHAPE) != 0) {
+            Log.e("Detector", "Flag set: KeyMetadata Shape Anomaly (" + ERR_KEY_METADATA_SHAPE + ")");
+        }
+        if ((code & ERR_OPERATION_ERROR_PATH) != 0) {
+            Log.e("Detector", "Flag set: IKeystoreOperation Error-Path Anomaly (" + ERR_OPERATION_ERROR_PATH + ")");
+        }
+        if ((code & ERR_LIST_ENTRIES_BATCHED) != 0) {
+            Log.e(
+                    "Detector",
+                    "Flag set: IKeystoreService ListEntriesBatched Anomaly (" + ERR_LIST_ENTRIES_BATCHED + ")");
         }
     }
 }
