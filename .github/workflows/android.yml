@@ -59,7 +59,7 @@ jobs:
           filename=$(basename "$file")
 
           if [[ "$filename" == *"debug"* ]]; then
-            new_name="KeyDetector_D_v${COUNT}.apk"
+            new_name="KeyDetector_Debug_v${COUNT}.apk"
           else
             new_name="KeyDetector_v${COUNT}.apk"
           fi
