@@ -15,7 +15,6 @@ import com.xiaotong.keydetector.checker.AttestationSecurityLevelChecker;
 import com.xiaotong.keydetector.checker.BehaviorChecker;
 import com.xiaotong.keydetector.checker.BinderConsistencyChecker;
 import com.xiaotong.keydetector.checker.BinderHookChecker;
-import com.xiaotong.keydetector.checker.BootloaderUnlockedChecker;
 import com.xiaotong.keydetector.checker.BouncyCastleChainChecker;
 import com.xiaotong.keydetector.checker.ChallengeChecker;
 import com.xiaotong.keydetector.checker.Checker;
@@ -31,7 +30,6 @@ import com.xiaotong.keydetector.checker.SecurityLevelChecker;
 import com.xiaotong.keydetector.checker.UnknownRootChecker;
 import com.xiaotong.keydetector.checker.UpdateSubcompChecker;
 import com.xiaotong.keydetector.checker.VBMetaChecker;
-import com.xiaotong.keydetector.checker.VerifiedBootStateChecker;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -53,8 +51,6 @@ public final class DetectorEngine {
     private static final int ERR_SECURITY_LEVEL = 1 << 15;
     private static final int ERR_INJECTION = 1 << 16;
     private static final int ERR_ATTESTATION_SECURITY_LEVEL = 1 << 17;
-    private static final int ERR_BOOTLOADER_UNLOCKED = 1 << 18;
-    private static final int ERR_VERIFIED_BOOT_STATE = 1 << 19;
     private static final int ERR_KEY_ID_METADATA = 1 << 20;
     private static final int ERR_KEY_METADATA_SHAPE = 1 << 21;
     private static final int ERR_OPERATION_ERROR_PATH = 1 << 22;
@@ -79,8 +75,6 @@ public final class DetectorEngine {
         FlagCheckerMap.put(ERR_SECURITY_LEVEL, new SecurityLevelChecker());
         FlagCheckerMap.put(ERR_INJECTION, new AttestKeyHookChecker());
         FlagCheckerMap.put(ERR_ATTESTATION_SECURITY_LEVEL, new AttestationSecurityLevelChecker());
-        FlagCheckerMap.put(ERR_BOOTLOADER_UNLOCKED, new BootloaderUnlockedChecker());
-        FlagCheckerMap.put(ERR_VERIFIED_BOOT_STATE, new VerifiedBootStateChecker());
         FlagCheckerMap.put(ERR_KEY_ID_METADATA, new KeyIdMetadataChecker());
         FlagCheckerMap.put(ERR_KEY_METADATA_SHAPE, new KeyMetadataShapeChecker());
         FlagCheckerMap.put(ERR_OPERATION_ERROR_PATH, new OperationErrorPathChecker());
@@ -258,12 +252,6 @@ public final class DetectorEngine {
         }
         if ((code & ERR_ATTESTATION_SECURITY_LEVEL) != 0) {
             Log.e("Detector", "Flag set: Software-level Attestation Detected (" + ERR_ATTESTATION_SECURITY_LEVEL + ")");
-        }
-        if ((code & ERR_BOOTLOADER_UNLOCKED) != 0) {
-            Log.e("Detector", "Flag set: Bootloader Unlocked (" + ERR_BOOTLOADER_UNLOCKED + ")");
-        }
-        if ((code & ERR_VERIFIED_BOOT_STATE) != 0) {
-            Log.e("Detector", "Flag set: Verified Boot State Anomaly (" + ERR_VERIFIED_BOOT_STATE + ")");
         }
         if ((code & ERR_KEY_ID_METADATA) != 0) {
             Log.e("Detector", "Flag set: KeyMetadata KEY_ID Semantics Anomaly (" + ERR_KEY_ID_METADATA + ")");

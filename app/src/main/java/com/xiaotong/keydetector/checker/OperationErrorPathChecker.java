@@ -89,9 +89,7 @@ public final class OperationErrorPathChecker extends Checker {
             }
 
             if (anomalyDetected) {
-                Log.e(
-                        TAG,
-                        "ANOMALY: createOperation required compatibility parameters before later probes could run.");
+                Log.e(TAG, "ANOMALY: createOperation required compatibility parameters before later probes could run.");
                 return true;
             }
 
