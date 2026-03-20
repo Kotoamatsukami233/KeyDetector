@@ -6,11 +6,11 @@ plugins {
 import java.security.MessageDigest
 
 android {
-    namespace = "com.xiaotong.keydetector"
+    namespace = "io.github.xiaotong6666.keydetector"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.xiaotong.keydetector"
+        applicationId = "io.github.xiaotong6666.keydetector"
         minSdk = 26
         targetSdk = 36
         versionCode = 'git rev-list --count HEAD'.execute([], project.rootDir).text.trim().toInteger()
