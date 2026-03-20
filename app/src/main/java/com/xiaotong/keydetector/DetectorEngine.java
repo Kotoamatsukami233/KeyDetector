@@ -15,9 +15,11 @@ import com.xiaotong.keydetector.checker.AttestationSecurityLevelChecker;
 import com.xiaotong.keydetector.checker.BehaviorChecker;
 import com.xiaotong.keydetector.checker.BinderConsistencyChecker;
 import com.xiaotong.keydetector.checker.BinderHookChecker;
+import com.xiaotong.keydetector.checker.BiometricTeeIntegrationChecker;
 import com.xiaotong.keydetector.checker.BouncyCastleChainChecker;
 import com.xiaotong.keydetector.checker.ChallengeChecker;
 import com.xiaotong.keydetector.checker.Checker;
+import com.xiaotong.keydetector.checker.HardwareKeystoreInteractionChecker;
 import com.xiaotong.keydetector.checker.KeyConsistencyChecker;
 import com.xiaotong.keydetector.checker.KeyIdMetadataChecker;
 import com.xiaotong.keydetector.checker.KeyMetadataShapeChecker;
@@ -27,6 +29,8 @@ import com.xiaotong.keydetector.checker.OperationErrorPathChecker;
 import com.xiaotong.keydetector.checker.PatchModeChecker;
 import com.xiaotong.keydetector.checker.RevokedKeyChecker;
 import com.xiaotong.keydetector.checker.SecurityLevelChecker;
+import com.xiaotong.keydetector.checker.StrongBoxFunctionalityChecker;
+import com.xiaotong.keydetector.checker.TeeEncryptionPerformanceChecker;
 import com.xiaotong.keydetector.checker.UnknownRootChecker;
 import com.xiaotong.keydetector.checker.UpdateSubcompChecker;
 import com.xiaotong.keydetector.checker.VBMetaChecker;
@@ -51,10 +55,14 @@ public final class DetectorEngine {
     private static final int ERR_SECURITY_LEVEL = 1 << 15;
     private static final int ERR_INJECTION = 1 << 16;
     private static final int ERR_ATTESTATION_SECURITY_LEVEL = 1 << 17;
+    private static final int ERR_HARDWARE_KEYSTORE_INTERACTION = 1 << 18;
+    private static final int ERR_STRONGBOX_FUNCTIONALITY = 1 << 19;
     private static final int ERR_KEY_ID_METADATA = 1 << 20;
     private static final int ERR_KEY_METADATA_SHAPE = 1 << 21;
     private static final int ERR_OPERATION_ERROR_PATH = 1 << 22;
     private static final int ERR_LIST_ENTRIES_BATCHED = 1 << 23;
+    private static final int ERR_BIOMETRIC_TEE_INTEGRATION = 1 << 24;
+    private static final int ERR_TEE_ENCRYPTION_PERFORMANCE = 1 << 25;
     public static final LinkedHashMap<Integer, Checker> FlagCheckerMap = new LinkedHashMap<>();
 
     static {
@@ -75,10 +83,14 @@ public final class DetectorEngine {
         FlagCheckerMap.put(ERR_SECURITY_LEVEL, new SecurityLevelChecker());
         FlagCheckerMap.put(ERR_INJECTION, new AttestKeyHookChecker());
         FlagCheckerMap.put(ERR_ATTESTATION_SECURITY_LEVEL, new AttestationSecurityLevelChecker());
+        FlagCheckerMap.put(ERR_HARDWARE_KEYSTORE_INTERACTION, new HardwareKeystoreInteractionChecker());
+        FlagCheckerMap.put(ERR_STRONGBOX_FUNCTIONALITY, new StrongBoxFunctionalityChecker());
         FlagCheckerMap.put(ERR_KEY_ID_METADATA, new KeyIdMetadataChecker());
         FlagCheckerMap.put(ERR_KEY_METADATA_SHAPE, new KeyMetadataShapeChecker());
         FlagCheckerMap.put(ERR_OPERATION_ERROR_PATH, new OperationErrorPathChecker());
         FlagCheckerMap.put(ERR_LIST_ENTRIES_BATCHED, new ListEntriesBatchedChecker());
+        FlagCheckerMap.put(ERR_BIOMETRIC_TEE_INTEGRATION, new BiometricTeeIntegrationChecker());
+        FlagCheckerMap.put(ERR_TEE_ENCRYPTION_PERFORMANCE, new TeeEncryptionPerformanceChecker());
     }
 
     public int run(CheckerContext ctx) {
@@ -253,6 +265,14 @@ public final class DetectorEngine {
         if ((code & ERR_ATTESTATION_SECURITY_LEVEL) != 0) {
             Log.e("Detector", "Flag set: Software-level Attestation Detected (" + ERR_ATTESTATION_SECURITY_LEVEL + ")");
         }
+        if ((code & ERR_HARDWARE_KEYSTORE_INTERACTION) != 0) {
+            Log.e(
+                    "Detector",
+                    "Flag set: Hardware Keystore Interaction Anomaly (" + ERR_HARDWARE_KEYSTORE_INTERACTION + ")");
+        }
+        if ((code & ERR_STRONGBOX_FUNCTIONALITY) != 0) {
+            Log.e("Detector", "Flag set: StrongBox Functionality Anomaly (" + ERR_STRONGBOX_FUNCTIONALITY + ")");
+        }
         if ((code & ERR_KEY_ID_METADATA) != 0) {
             Log.e("Detector", "Flag set: KeyMetadata KEY_ID Semantics Anomaly (" + ERR_KEY_ID_METADATA + ")");
         }
@@ -266,6 +286,12 @@ public final class DetectorEngine {
             Log.e(
                     "Detector",
                     "Flag set: IKeystoreService ListEntriesBatched Anomaly (" + ERR_LIST_ENTRIES_BATCHED + ")");
+        }
+        if ((code & ERR_BIOMETRIC_TEE_INTEGRATION) != 0) {
+            Log.e("Detector", "Flag set: Biometric TEE Integration Anomaly (" + ERR_BIOMETRIC_TEE_INTEGRATION + ")");
+        }
+        if ((code & ERR_TEE_ENCRYPTION_PERFORMANCE) != 0) {
+            Log.e("Detector", "Flag set: TEE Encryption Performance Anomaly (" + ERR_TEE_ENCRYPTION_PERFORMANCE + ")");
         }
     }
 }
