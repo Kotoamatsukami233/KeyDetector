@@ -92,16 +92,36 @@ public final class DetectorEngine {
 
     public int run(CheckerContext ctx) {
         int result = 0;
+        Log.i(
+                "Detector",
+                "=== Detection Started === rootType="
+                        + rootTypeToString(ctx.rootType)
+                        + ", certChainSize="
+                        + (ctx.certChain != null ? ctx.certChain.size() : -1)
+                        + ", challengeLength="
+                        + (ctx.challenge != null ? ctx.challenge.length : -1)
+                        + ", checkerCount="
+                        + FlagCheckerMap.size());
 
         for (Map.Entry<Integer, Checker> entry : DetectorEngine.FlagCheckerMap.entrySet()) {
             try {
                 if (entry.getValue() == null) continue; // ?
+                Log.d(
+                        "Detector",
+                        "Running checker: "
+                                + entry.getValue().name()
+                                + " flag=0x"
+                                + Integer.toHexString(entry.getKey()));
                 boolean hit = entry.getValue().check(ctx);
                 if (hit) {
                     result |= entry.getKey();
                     Log.e(
                             "Detector",
                             "Hit: " + entry.getValue().name() + " flag=0x" + Integer.toHexString(entry.getKey()));
+                } else {
+                    Log.d(
+                            "Detector",
+                            "Pass: " + entry.getValue().name() + " flag=0x" + Integer.toHexString(entry.getKey()));
                 }
             } catch (Throwable t) {
                 Log.e("Detector", "Checker crashed: " + entry.getValue().name(), t);
