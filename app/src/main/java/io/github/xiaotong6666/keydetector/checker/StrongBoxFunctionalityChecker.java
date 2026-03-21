@@ -18,12 +18,13 @@ import javax.crypto.SecretKeyFactory;
  * 检测原理：
  * - 仅在系统声明支持 StrongBox 时运行
  * - 尝试生成 setIsStrongBoxBacked(true) 的密钥
- * - 再通过 KeyInfo 验证该密钥是否真的位于 StrongBox
+ * - 优先通过公开 API 校验安全级别
+ * - Android 12+ 额外通过 Keystore2 getKeyEntry / KeyMetadata 反射校验底层 securityLevel
  *
  * 判定规则：
  * - 设备未声明 StrongBox 支持时不报异常
  * - 若声明支持但无法生成 StrongBox key，视为异常
- * - API 31+：若 KeyInfo.getSecurityLevel() 不能确认为 StrongBox，视为异常
+ * - API 31+：若 KeyInfo.getSecurityLevel() 或 Keystore2 metadata.keySecurityLevel 不能确认为 StrongBox，视为异常
  * - API 28-30：若显式请求 StrongBox 后生成成功，但密钥不在安全硬件内，视为异常
  */
 public final class StrongBoxFunctionalityChecker extends Checker {
@@ -88,6 +89,11 @@ public final class StrongBoxFunctionalityChecker extends Checker {
                                 + securityLevel
                                 + " insideSecureHardware="
                                 + isInsideSecureHardware);
+
+                Boolean keystore2StrongBox = verifyStrongBoxViaKeystore2Metadata();
+                if (keystore2StrongBox != null) {
+                    strongBoxRequestSatisfied &= keystore2StrongBox;
+                }
             } else {
                 strongBoxRequestSatisfied = isInsideSecureHardware;
                 Log.d(
@@ -126,6 +132,34 @@ public final class StrongBoxFunctionalityChecker extends Checker {
                 keyStore.deleteEntry(TEST_ALIAS);
             }
         } catch (Exception ignored) {
+        }
+    }
+
+    private Boolean verifyStrongBoxViaKeystore2Metadata() {
+        try {
+            Object service = Reflection.getIKeystoreService();
+            Object descriptor = Reflection.createKeyDescriptor(TEST_ALIAS);
+            Object keyEntryResponse = Reflection.getKeyEntry(service, descriptor);
+            Object metadata = Reflection.getMetadata(keyEntryResponse);
+            if (metadata == null) {
+                Log.w(TAG, "Keystore2 metadata verification unavailable: metadata is null.");
+                return null;
+            }
+            int keySecurityLevel = Reflection.getIntField(metadata, "keySecurityLevel");
+            int strongBoxLevel = Reflection.getSecurityLevelStrongBox();
+            boolean matches = keySecurityLevel == strongBoxLevel;
+            Log.d(
+                    TAG,
+                    "Keystore2 metadata verification: keySecurityLevel="
+                            + keySecurityLevel
+                            + " expectedStrongBoxLevel="
+                            + strongBoxLevel
+                            + " matches="
+                            + matches);
+            return matches;
+        } catch (Throwable t) {
+            Log.w(TAG, "Keystore2 metadata StrongBox verification unavailable", t);
+            return null;
         }
     }
 

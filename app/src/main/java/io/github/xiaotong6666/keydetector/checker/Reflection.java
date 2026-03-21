@@ -13,6 +13,7 @@ public class Reflection {
     public static final int DOMAIN_KEY_ID = 4;
     public static final long NSPACE_SELF = -1;
     public static final int SECURITY_LEVEL_TRUSTED_ENVIRONMENT = 1;
+    public static final int SECURITY_LEVEL_STRONGBOX = 2;
     public static final int KM_ERROR_INVALID_OPERATION_HANDLE = -28;
     public static final int RESPONSE_CODE_TOO_MUCH_DATA = 29;
 
@@ -188,6 +189,11 @@ public class Reflection {
                 "android.hardware.security.keymint.SecurityLevel",
                 "TRUSTED_ENVIRONMENT",
                 SECURITY_LEVEL_TRUSTED_ENVIRONMENT);
+    }
+
+    public static int getSecurityLevelStrongBox() {
+        return getStaticIntField(
+                "android.hardware.security.keymint.SecurityLevel", "STRONGBOX", SECURITY_LEVEL_STRONGBOX);
     }
 
     public static int getTag(String fieldName) {
