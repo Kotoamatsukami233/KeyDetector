@@ -7,7 +7,6 @@ import android.security.keystore.KeyInfo;
 import android.security.keystore.KeyProperties;
 import android.util.Log;
 import io.github.xiaotong6666.keydetector.CheckerContext;
-import java.lang.reflect.Method;
 import java.security.KeyStore;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -24,7 +23,8 @@ import javax.crypto.SecretKeyFactory;
  * 判定规则：
  * - 设备未声明 StrongBox 支持时不报异常
  * - 若声明支持但无法生成 StrongBox key，视为异常
- * - 若生成后无法确认其为 StrongBox backed，视为异常
+ * - API 31+：若 KeyInfo.getSecurityLevel() 不能确认为 StrongBox，视为异常
+ * - API 28-30：若显式请求 StrongBox 后生成成功，但密钥不在安全硬件内，视为异常
  */
 public final class StrongBoxFunctionalityChecker extends Checker {
     private static final String TAG = "StrongBoxChecker";
@@ -78,21 +78,34 @@ public final class StrongBoxFunctionalityChecker extends Checker {
             SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(secretKey.getAlgorithm(), "AndroidKeyStore");
             KeyInfo keyInfo = (KeyInfo) keyFactory.getKeySpec(secretKey, KeyInfo.class);
             boolean isInsideSecureHardware = keyInfo.isInsideSecureHardware();
-            boolean isStrongBoxBacked = false;
-            try {
-                Method method = keyInfo.getClass().getMethod("isStrongBoxBacked");
-                isStrongBoxBacked = (Boolean) method.invoke(keyInfo);
-            } catch (Exception ignored) {
+            boolean strongBoxRequestSatisfied;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                int securityLevel = keyInfo.getSecurityLevel();
+                strongBoxRequestSatisfied = securityLevel == KeyProperties.SECURITY_LEVEL_STRONGBOX;
+                Log.d(
+                        TAG,
+                        "StrongBox verification (API 31+): securityLevel="
+                                + securityLevel
+                                + " insideSecureHardware="
+                                + isInsideSecureHardware);
+            } else {
+                strongBoxRequestSatisfied = isInsideSecureHardware;
+                Log.d(
+                        TAG,
+                        "StrongBox fallback inference for API "
+                                + Build.VERSION.SDK_INT
+                                + ": requested StrongBox key generated successfully; insideSecureHardware="
+                                + isInsideSecureHardware);
             }
 
-            if (!(isInsideSecureHardware && isStrongBoxBacked)) {
+            if (!strongBoxRequestSatisfied) {
                 Log.e(
                         TAG,
-                        "ANOMALY: device advertises StrongBox but generated key is not StrongBox-backed"
+                        "ANOMALY: device advertises StrongBox but generated key did not satisfy StrongBox validation"
                                 + " secureHardware="
                                 + isInsideSecureHardware
-                                + " strongBox="
-                                + isStrongBoxBacked);
+                                + " apiLevel="
+                                + Build.VERSION.SDK_INT);
                 return true;
             }
 
