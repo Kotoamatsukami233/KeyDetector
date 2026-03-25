@@ -166,12 +166,26 @@ public class MainActivity extends Activity {
                         DetectorEngine detector = new DetectorEngine();
                         CheckerContext ctx = getCheckerContext(this);
                         int code = (ctx == null) ? 2 : detector.run(ctx);
-                        String resultText = parseResult(code);
+                        RenderedResult renderedResult = parseResult(code);
 
                         runOnUiThread(() -> {
-                            tvResult.setText(resultText);
-                            int targetAttr = (code == 1) ? android.R.attr.colorPrimary : android.R.attr.colorError;
-                            tvResult.setTextColor(MaterialColors.getColor(this, targetAttr, Color.RED));
+                            int mainColorAttr = (code == 1) ? android.R.attr.colorPrimary : android.R.attr.colorError;
+                            int mainColor = MaterialColors.getColor(this, mainColorAttr, Color.RED);
+                            int soterColorAttr = renderedResult.soterOverallOk
+                                    ? android.R.attr.colorPrimary
+                                    : android.R.attr.colorError;
+                            int soterColor = MaterialColors.getColor(this, soterColorAttr, Color.RED);
+
+                            SpannableStringBuilder builder = new SpannableStringBuilder(renderedResult.text);
+                            if (renderedResult.soterStart >= 0 && renderedResult.soterStart < builder.length()) {
+                                builder.setSpan(
+                                        new ForegroundColorSpan(soterColor),
+                                        renderedResult.soterStart,
+                                        builder.length(),
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            }
+                            tvResult.setText(builder);
+                            tvResult.setTextColor(mainColor);
                             detectionRunning = false;
                             stickLogToBottom = false;
                             btn.setEnabled(true);
@@ -188,14 +202,14 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    private String parseResult(int code) {
+    private RenderedResult parseResult(int code) {
         StringBuilder sb = new StringBuilder("Status Code: " + code + "\n状态码: " + code + "\n\n");
         SoterSdkSequenceChecker.Result soterResult =
                 SoterSdkSequenceChecker.probe(getApplicationContext(), this::appendLogLine);
         if (code == 1 || code == 0) {
             sb.append(parseSimpleStatus(code));
-            appendSoterUiStatus(sb, soterResult.uiSummary);
-            return sb.toString();
+            int soterStart = appendSoterUiStatus(sb, soterResult.uiSummary);
+            return new RenderedResult(sb.toString(), soterStart, soterResult.overallOk);
         }
         for (Map.Entry<Integer, Checker> entry : DetectorEngine.FlagCheckerMap.entrySet()) {
             if (entry.getValue() != null && (code & entry.getKey()) != 0) {
@@ -203,8 +217,8 @@ public class MainActivity extends Activity {
                         .append("\n\n");
             }
         }
-        appendSoterUiStatus(sb, soterResult.uiSummary);
-        return sb.toString();
+        int soterStart = appendSoterUiStatus(sb, soterResult.uiSummary);
+        return new RenderedResult(sb.toString(), soterStart, soterResult.overallOk);
     }
 
     private String parseSimpleStatus(int code) {
@@ -214,8 +228,22 @@ public class MainActivity extends Activity {
         };
     }
 
-    private void appendSoterUiStatus(StringBuilder sb, String soterSummary) {
+    private int appendSoterUiStatus(StringBuilder sb, String soterSummary) {
+        int soterStart = sb.length();
         sb.append("\n\n").append(soterSummary);
+        return soterStart;
+    }
+
+    private static final class RenderedResult {
+        final String text;
+        final int soterStart;
+        final boolean soterOverallOk;
+
+        RenderedResult(String text, int soterStart, boolean soterOverallOk) {
+            this.text = text;
+            this.soterStart = soterStart;
+            this.soterOverallOk = soterOverallOk;
+        }
     }
 
     private void startLogcatReader() {

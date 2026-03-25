@@ -27,6 +27,7 @@ public final class SoterSdkSequenceChecker {
         boolean authOk = false;
         boolean authPresent = false;
         boolean authModelPresent = false;
+        boolean keyPrepareOk = false;
         boolean signSessionOk = false;
         long sessionId = -1;
 
@@ -129,7 +130,7 @@ public final class SoterSdkSequenceChecker {
                     }
                 }
 
-                boolean keyPrepareOk = askOk && askModelPresent && authOk && authPresent && authModelPresent;
+                keyPrepareOk = askOk && askModelPresent && authOk && authPresent && authModelPresent;
                 ui.append("\n3. 密钥准备：")
                         .append(keyPrepareOk ? "通过" : "失败")
                         .append(" (ASK=")
@@ -216,7 +217,9 @@ public final class SoterSdkSequenceChecker {
                 .append(removeAskSkipped)
                 .append(")");
 
-        return new Result(nativeSupport, signSessionOk, ui.toString());
+        boolean initServiceOk = nativeSupport && trebleConnected;
+        boolean overallOk = initServiceOk && keyPrepareOk && signSessionOk;
+        return new Result(initServiceOk, keyPrepareOk, signSessionOk, overallOk, ui.toString());
     }
 
     private static String toResultLog(SoterCoreResult result) {
@@ -238,13 +241,22 @@ public final class SoterSdkSequenceChecker {
     }
 
     public static final class Result {
-        public final boolean nativeSupported;
+        public final boolean initServiceOk;
+        public final boolean keyPrepareOk;
         public final boolean signSessionOk;
+        public final boolean overallOk;
         public final String uiSummary;
 
-        public Result(boolean nativeSupported, boolean signSessionOk, String uiSummary) {
-            this.nativeSupported = nativeSupported;
+        public Result(
+                boolean initServiceOk,
+                boolean keyPrepareOk,
+                boolean signSessionOk,
+                boolean overallOk,
+                String uiSummary) {
+            this.initServiceOk = initServiceOk;
+            this.keyPrepareOk = keyPrepareOk;
             this.signSessionOk = signSessionOk;
+            this.overallOk = overallOk;
             this.uiSummary = uiSummary;
         }
     }
