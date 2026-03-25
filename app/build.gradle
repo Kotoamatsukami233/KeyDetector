@@ -72,6 +72,7 @@ dependencies {
     implementation libs.hiddenapibypass
     implementation libs.bcprov.jdk15to18
     implementation libs.material
+    implementation libs.soter.core
 }
 
 spotless {
