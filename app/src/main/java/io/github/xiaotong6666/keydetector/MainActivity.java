@@ -27,7 +27,7 @@ import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.textview.MaterialTextView;
 import io.github.xiaotong6666.keydetector.checker.Checker;
-import io.github.xiaotong6666.keydetector.checker.SoterSupportChecker;
+import io.github.xiaotong6666.keydetector.checker.SoterSdkSequenceChecker;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayDeque;
@@ -190,10 +190,11 @@ public class MainActivity extends Activity {
 
     private String parseResult(int code) {
         StringBuilder sb = new StringBuilder("Status Code: " + code + "\n状态码: " + code + "\n\n");
-        boolean soterSupported = SoterSupportChecker.probe(getApplicationContext(), this::appendLogLine).supported;
+        SoterSdkSequenceChecker.Result soterResult =
+                SoterSdkSequenceChecker.probe(getApplicationContext(), this::appendLogLine);
         if (code == 1 || code == 0) {
             sb.append(parseSimpleStatus(code));
-            appendSoterUiStatus(sb, soterSupported);
+            appendSoterUiStatus(sb, soterResult.uiSummary);
             return sb.toString();
         }
         for (Map.Entry<Integer, Checker> entry : DetectorEngine.FlagCheckerMap.entrySet()) {
@@ -202,7 +203,7 @@ public class MainActivity extends Activity {
                         .append("\n\n");
             }
         }
-        appendSoterUiStatus(sb, soterSupported);
+        appendSoterUiStatus(sb, soterResult.uiSummary);
         return sb.toString();
     }
 
@@ -213,10 +214,8 @@ public class MainActivity extends Activity {
         };
     }
 
-    private void appendSoterUiStatus(StringBuilder sb, boolean soterSupported) {
-        if (!soterSupported) {
-            sb.append("\nSOTER 状态：该设备不支持 SOTER key");
-        }
+    private void appendSoterUiStatus(StringBuilder sb, String soterSummary) {
+        sb.append("\n\n").append(soterSummary);
     }
 
     private void startLogcatReader() {
