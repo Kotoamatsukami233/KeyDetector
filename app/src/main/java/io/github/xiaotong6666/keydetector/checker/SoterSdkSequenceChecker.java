@@ -10,6 +10,7 @@ import com.tencent.soter.soterserver.SoterSessionResult;
 public final class SoterSdkSequenceChecker {
     private static final String TAG = "KeyDetectorSoter";
     private static final String TEST_ALIAS_PREFIX = "keydetector_soter_probe_";
+    private static final int MAX_WECHAT_PREPARE_RETRY = 3;
 
     private SoterSdkSequenceChecker() {}
 
@@ -30,6 +31,9 @@ public final class SoterSdkSequenceChecker {
         boolean keyPrepareOk = false;
         boolean signSessionOk = false;
         long sessionId = -1;
+        int prepareRetryCount = 0;
+        int finalPrepareErrCode = 0;
+        String finalPrepareErrMsg = "ok";
 
         appendLog(logSink, "Step 1/5: initialize and service reachability");
         try {
@@ -100,37 +104,19 @@ public final class SoterSdkSequenceChecker {
         appendLog(logSink, "Step 3/5: key preparation (ASK/AuthKey)");
         if (nativeSupport) {
             try {
-                askPreExisted = SoterCore.hasAppGlobalSecureKey();
-                appendLog(logSink, "ASK pre-exists before probe: " + askPreExisted);
-                if (askPreExisted) {
-                    askOk = true;
-                } else {
-                    SoterCoreResult askResult = SoterCore.generateAppGlobalSecureKey();
-                    askOk = askResult != null && askResult.isSuccess();
-                    askGeneratedByProbe = askOk;
-                    appendLog(logSink, "ASK generate result: " + toResultLog(askResult));
-                }
+                PrepareState prepareState = prepareKeyLikeWechat(testAlias, logSink);
+                askPreExisted = prepareState.askPreExisted;
+                askGeneratedByProbe = prepareState.askGeneratedByProbe;
+                askOk = prepareState.askOk;
+                askModelPresent = prepareState.askModelPresent;
+                authOk = prepareState.authOk;
+                authPresent = prepareState.authPresent;
+                authModelPresent = prepareState.authModelPresent;
+                keyPrepareOk = prepareState.keyPrepareOk;
+                prepareRetryCount = prepareState.retryCount;
+                finalPrepareErrCode = prepareState.finalErrCode;
+                finalPrepareErrMsg = prepareState.finalErrMsg;
 
-                askModelPresent = SoterCore.getAppGlobalSecureKeyModel() != null;
-                appendLog(logSink, "ASK model present: " + askModelPresent);
-
-                if (askOk) {
-                    SoterCoreResult authResult = SoterCore.generateAuthKey(testAlias);
-                    authOk = authResult != null && authResult.isSuccess();
-                    appendLog(logSink, "AuthKey generate result: " + toResultLog(authResult) + ", alias=" + testAlias);
-                    if (authOk) {
-                        authPresent = SoterCore.hasAuthKey(testAlias);
-                        authModelPresent = SoterCore.getAuthKeyModel(testAlias) != null;
-                        appendLog(
-                                logSink,
-                                "AuthKey presence check: hasAuthKey="
-                                        + authPresent
-                                        + ", authModelPresent="
-                                        + authModelPresent);
-                    }
-                }
-
-                keyPrepareOk = askOk && askModelPresent && authOk && authPresent && authModelPresent;
                 ui.append("\n3. 密钥准备：")
                         .append(keyPrepareOk ? "通过" : "失败")
                         .append(" (ASK=")
@@ -143,6 +129,10 @@ public final class SoterSdkSequenceChecker {
                         .append(authPresent)
                         .append(", authModel=")
                         .append(authModelPresent)
+                        .append(", retries=")
+                        .append(prepareRetryCount)
+                        .append(", finalErr=")
+                        .append(finalPrepareErrCode)
                         .append(")");
             } catch (Throwable t) {
                 appendLog(
@@ -220,6 +210,120 @@ public final class SoterSdkSequenceChecker {
         boolean initServiceOk = nativeSupport && trebleConnected;
         boolean overallOk = initServiceOk && keyPrepareOk && signSessionOk;
         return new Result(initServiceOk, keyPrepareOk, signSessionOk, overallOk, ui.toString());
+    }
+
+    private static PrepareState prepareKeyLikeWechat(String testAlias, LogSink logSink) {
+        PrepareState state = new PrepareState();
+        state.askPreExisted = SoterCore.hasAppGlobalSecureKey();
+        appendLog(logSink, "ASK pre-exists before probe: " + state.askPreExisted);
+
+        int lastErrCode = 0;
+        String lastErrMsg = "ok";
+        for (int attempt = 0; attempt < MAX_WECHAT_PREPARE_RETRY; attempt++) {
+            state.retryCount = attempt;
+            appendLog(logSink, "prepareAuthKey attempt=" + attempt);
+
+            // WeChat: second retry path removes ASK first.
+            if (attempt == 1) {
+                SoterCoreResult rmAsk = SoterCore.removeAppGlobalSecureKey();
+                appendLog(logSink, "wechat-like retry path: remove ASK before retry, result=" + toResultLog(rmAsk));
+            }
+
+            boolean askExists = SoterCore.hasAppGlobalSecureKey();
+            if (!askExists) {
+                SoterCoreResult askResult = SoterCore.generateAppGlobalSecureKey();
+                appendLog(logSink, "ASK generate result: " + toResultLog(askResult));
+                askExists = askResult != null && askResult.isSuccess();
+                if (askExists) {
+                    state.askGeneratedByProbe = true;
+                } else {
+                    lastErrCode = askResult != null ? askResult.errCode : -999;
+                    lastErrMsg = askResult != null ? askResult.errMsg : "ASK generate result null";
+                    appendLog(logSink, "prepare fail category: " + mapWechatPrepareError(lastErrCode, lastErrMsg));
+                    continue;
+                }
+            }
+
+            state.askOk = askExists;
+            state.askModelPresent = SoterCore.getAppGlobalSecureKeyModel() != null;
+            appendLog(logSink, "ASK model present: " + state.askModelPresent);
+
+            if (!state.askModelPresent) {
+                lastErrCode = 1003;
+                lastErrMsg = "ask model missing";
+                appendLog(logSink, "prepare fail category: " + mapWechatPrepareError(lastErrCode, lastErrMsg));
+                continue;
+            }
+
+            SoterCoreResult authResult = SoterCore.generateAuthKey(testAlias);
+            state.authOk = authResult != null && authResult.isSuccess();
+            appendLog(logSink, "AuthKey generate result: " + toResultLog(authResult) + ", alias=" + testAlias);
+            if (!state.authOk) {
+                lastErrCode = authResult != null ? authResult.errCode : -999;
+                lastErrMsg = authResult != null ? authResult.errMsg : "AuthKey generate result null";
+                appendLog(logSink, "prepare fail category: " + mapWechatPrepareError(lastErrCode, lastErrMsg));
+                continue;
+            }
+
+            state.authPresent = SoterCore.hasAuthKey(testAlias);
+            state.authModelPresent = SoterCore.getAuthKeyModel(testAlias) != null;
+            appendLog(
+                    logSink,
+                    "AuthKey presence check: hasAuthKey="
+                            + state.authPresent
+                            + ", authModelPresent="
+                            + state.authModelPresent);
+
+            if (!state.authPresent || !state.authModelPresent) {
+                lastErrCode = 1006;
+                lastErrMsg = "auth key model is null or auth key absent after generation";
+                appendLog(logSink, "prepare fail category: " + mapWechatPrepareError(lastErrCode, lastErrMsg));
+                continue;
+            }
+
+            state.keyPrepareOk = true;
+            state.finalErrCode = 0;
+            state.finalErrMsg = "ok";
+            return state;
+        }
+
+        state.finalErrCode = lastErrCode;
+        state.finalErrMsg = lastErrMsg;
+        return state;
+    }
+
+    private static String mapWechatPrepareError(int errCode, String errMsg) {
+        String detail = " (errCode=" + errCode + ", errMsg=" + errMsg + ")";
+        if (errCode == 1006) {
+            return "hy: failed upload: model is null or necessary elements null" + detail;
+        }
+        if (errCode == 1004) {
+            return "hy: update pay auth key failed. remove" + detail;
+        }
+        if (errCode == 1003) {
+            return "upload ask failed" + detail;
+        }
+        if (errCode == 6) {
+            return "hy: gen auth key failed" + detail;
+        }
+        if (errCode == 4 || errCode == 3) {
+            return "hy: gen auth key failed" + detail;
+        }
+        return "unknown error when prepare auth key" + detail;
+    }
+
+    private static final class PrepareState {
+        boolean askPreExisted;
+        boolean askGeneratedByProbe;
+        boolean askOk;
+        boolean askModelPresent;
+        boolean authOk;
+        boolean authPresent;
+        boolean authModelPresent;
+        boolean keyPrepareOk;
+        int retryCount;
+        int finalErrCode;
+        String finalErrMsg;
     }
 
     private static String toResultLog(SoterCoreResult result) {
