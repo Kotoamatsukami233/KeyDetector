@@ -21,6 +21,8 @@ public final class SoterSdkSequenceChecker {
         boolean nativeSupport = false;
         int coreType = 0;
         boolean trebleConnected = false;
+        boolean servicePresenceKnown = false;
+        boolean servicePresent = false;
         boolean askOk = false;
         boolean askModelPresent = false;
         boolean askGeneratedByProbe = false;
@@ -44,6 +46,8 @@ public final class SoterSdkSequenceChecker {
             nativeSupport = SoterCore.isNativeSupportSoter();
             coreType = SoterCore.getSoterCoreType();
             trebleConnected = SoterCore.isTrebleServiceConnected();
+            servicePresenceKnown = true;
+            servicePresent = nativeSupport;
             appendLog(
                     logSink,
                     "Native support="
@@ -52,8 +56,9 @@ public final class SoterSdkSequenceChecker {
                             + coreType
                             + ", trebleConnected="
                             + trebleConnected);
+            String initStatus = !nativeSupport ? "跳过" : (trebleConnected ? "通过" : "已发现");
             ui.append("\n1. 初始化与服务：")
-                    .append(nativeSupport ? "通过" : "失败")
+                    .append(initStatus)
                     .append(" (coreType=")
                     .append(coreType)
                     .append(", trebleConnected=")
@@ -213,7 +218,16 @@ public final class SoterSdkSequenceChecker {
                 .append(")");
 
         boolean initServiceOk = nativeSupport && trebleConnected;
-        boolean overallOk = initServiceOk && keyPrepareOk && signSessionOk;
+        // Missing SOTER service is treated as not-applicable for UI coloring.
+        // Only mark the SOTER block as failed when the service is present but follow-up key/sign steps fail.
+        boolean overallOk;
+        if (servicePresenceKnown && !servicePresent) {
+            overallOk = true;
+        } else if (servicePresenceKnown) {
+            overallOk = keyPrepareOk && signSessionOk;
+        } else {
+            overallOk = false;
+        }
         return new Result(initServiceOk, keyPrepareOk, signSessionOk, overallOk, ui.toString());
     }
 
