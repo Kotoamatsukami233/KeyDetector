@@ -1,5 +1,6 @@
 package io.github.xiaotong6666.keydetector;
 
+import static io.github.xiaotong6666.keydetector.Constant.GOOGLE_ROOT_CA1;
 import static io.github.xiaotong6666.keydetector.Constant.GOOGLE_ROOT_F;
 import static io.github.xiaotong6666.keydetector.Constant.GOOGLE_ROOT_G;
 import static io.github.xiaotong6666.keydetector.Constant.GOOGLE_ROOT_H;
@@ -7,6 +8,7 @@ import static io.github.xiaotong6666.keydetector.Constant.GOOGLE_ROOT_I;
 import static io.github.xiaotong6666.keydetector.Constant.KEYSTORE_PROVIDER;
 import static io.github.xiaotong6666.keydetector.Constant.KEY_ALIAS;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_AOSP;
+import static io.github.xiaotong6666.keydetector.Constant.ROOT_GOOGLE_CA1;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_GOOGLE_F;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_GOOGLE_I;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_UNKNOWN;
@@ -48,6 +50,7 @@ public class Util {
         if (Arrays.equals(key, GOOGLE_ROOT_F)) return ROOT_GOOGLE_F;
         if (Arrays.equals(key, GOOGLE_ROOT_G) || Arrays.equals(key, GOOGLE_ROOT_H)) return ROOT_AOSP;
         if (Arrays.equals(key, GOOGLE_ROOT_I)) return ROOT_GOOGLE_I;
+        if (Arrays.equals(key, GOOGLE_ROOT_CA1)) return ROOT_GOOGLE_CA1;
         String keyB64 = Base64.encodeToString(key, Base64.NO_WRAP);
         return VENDOR_REQUIRED_ROOT_PUBLIC_KEYS_B64.contains(keyB64) ? ROOT_VENDOR_REQUIRED : ROOT_UNKNOWN;
     }

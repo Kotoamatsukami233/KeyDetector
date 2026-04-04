@@ -1,5 +1,5 @@
 [versions]
-agp = "9.0.0"
+agp = "9.1.0"
 bcpkixJdk15to18 = "1.83"
 core = "1.17.0"
 hiddenapibypass = "6.1"

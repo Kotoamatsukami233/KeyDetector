@@ -2,6 +2,7 @@ package io.github.xiaotong6666.keydetector;
 
 import static io.github.xiaotong6666.keydetector.Constant.RESULT_TRUSTED;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_AOSP;
+import static io.github.xiaotong6666.keydetector.Constant.ROOT_GOOGLE_CA1;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_GOOGLE_F;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_GOOGLE_I;
 import static io.github.xiaotong6666.keydetector.Constant.ROOT_UNKNOWN;
@@ -149,8 +150,10 @@ public final class DetectorEngine {
         }
 
         boolean trustedBoot = (result & RESULT_TRUSTED) != 0;
-        boolean rootTrusted =
-                ctx.rootType == ROOT_GOOGLE_F || ctx.rootType == ROOT_GOOGLE_I || ctx.rootType == ROOT_VENDOR_REQUIRED;
+        boolean rootTrusted = ctx.rootType == ROOT_GOOGLE_F
+                || ctx.rootType == ROOT_GOOGLE_I
+                || ctx.rootType == ROOT_GOOGLE_CA1
+                || ctx.rootType == ROOT_VENDOR_REQUIRED;
         boolean attestationOk = (result
                         & (ERR_BINDER_CONSISTENCY
                                 | ERR_CHALLENGE
@@ -209,6 +212,8 @@ public final class DetectorEngine {
                 return "GOOGLE_F";
             case ROOT_GOOGLE_I:
                 return "GOOGLE_I";
+            case ROOT_GOOGLE_CA1:
+                return "GOOGLE_CA1";
             case ROOT_VENDOR_REQUIRED:
                 return "VENDOR_REQUIRED";
             case ROOT_UNKNOWN:
