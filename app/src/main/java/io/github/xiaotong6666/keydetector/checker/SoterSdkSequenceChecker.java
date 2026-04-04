@@ -71,8 +71,8 @@ public final class SoterSdkSequenceChecker {
 
         appendLog(logSink, "Step 2/5: biometric capability");
         try {
-            boolean fpHw = SoterCore.isSupportFingerprint(context);
-            boolean fpEnrolled = SoterCore.isSystemHasFingerprint(context);
+            boolean fpHw = SoterCore.isSupportBiometric(context, ConstantsSoter.FINGERPRINT_AUTH);
+            boolean fpEnrolled = SoterCore.isSystemHasBiometric(context, ConstantsSoter.FINGERPRINT_AUTH);
             boolean fpFrozen = SoterCore.isCurrentFingerprintFrozen(context);
             boolean faceHw = SoterCore.isSupportBiometric(context, ConstantsSoter.FACEID_AUTH);
             boolean faceEnrolled = SoterCore.isSystemHasBiometric(context, ConstantsSoter.FACEID_AUTH);
