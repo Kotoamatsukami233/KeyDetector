@@ -192,20 +192,26 @@ public final class SoterSdkSequenceChecker {
         // if ASK did not pre-exist before probe, try to remove it in cleanup.
         // Using askPreExisted is more stable than askGeneratedByProbe in remote-proxy mode,
         // where ASK may become available through fallback paths.
-        if (nativeSupport) {
-            try {
-                SoterCoreResult removeAskResult = SoterCore.removeAppGlobalSecureKey();
-                removeAskOk = removeAskResult != null
-                        && (removeAskResult.isSuccess() || isCleanupNonFatal(removeAskResult.errCode));
-                appendLog(logSink, "removeAppGlobalSecureKey result: " + toResultLog(removeAskResult));
-            } catch (Throwable t) {
-                appendLog(
-                        logSink,
-                        "removeAppGlobalSecureKey exception: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+        if (nativeSupport && trebleConnected) {
+            if (!askPreExisted) {
+                try {
+                    SoterCoreResult removeAskResult = SoterCore.removeAppGlobalSecureKey();
+                    removeAskOk = removeAskResult != null
+                            && (removeAskResult.isSuccess() || isCleanupNonFatal(removeAskResult.errCode));
+                    appendLog(logSink, "removeAppGlobalSecureKey result: " + toResultLog(removeAskResult));
+                } catch (Throwable t) {
+                    appendLog(
+                            logSink,
+                            "removeAppGlobalSecureKey exception: "
+                                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+                }
+            } else {
+                removeAskSkipped = true;
+                appendLog(logSink, "Skip removeAppGlobalSecureKey: ASK pre-existed before probe");
             }
         } else {
             removeAskSkipped = true;
-            appendLog(logSink, "Skip removeAppGlobalSecureKey: nativeSupport=false");
+            appendLog(logSink, "Skip removeAppGlobalSecureKey: service not reachable");
         }
         ui.append("\n5. 清理：")
                 .append(removeAuthOk || removeAskOk || removeAskSkipped ? "已执行" : "可能未执行")
