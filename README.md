@@ -5,3 +5,4 @@
 感谢 落词笺 提供的 NT 和检测点谢谢喵    
 感谢 VictorModi 为项目重构谢谢喵    
 感谢 Xieansecn 添加 md3 主题谢谢喵    
+本项目的检测点会在完善后贡献到 Duck Detector 喵
